@@ -103,4 +103,60 @@ Under the contexts Maps and Integration Patterns we have some questions
 . How are we going to avoid causing trouble for downstream contexts?
 
 
+== DDD Part 2. Tactical Domain-Driven Design
 
+. Compared to strategic domain-driven design, tactical design is much more hands-on and closer to the actual code. Strategic design deals with abstract wholes whereas tactical design deals with classes and modules, The purpose of tactical design is to refine the domain model to a stage where it can be converted into working code, design is an iterative process and so it makes sense to combine strategic and tactical design.
+. One of the most important concepts in tactical DDD is the *value object.*, value objects should always be made _immutable_, instead of changing the state of the value object, you replace it with a new instance. For complex value objects, consider using the builder or essence pattern.
+. Value objects are not only containers of data - they can also contain business logic. The fact that the value objects are also immutable makes the business operations both thread-safe and side-effect free This is one of the reasons I like value objects so much and why you should try to model as many of your domain concepts as possible as value objects. Also, try to make the value objects as small and as coherent as possible - this makes them easier to maintain and reuse
+
+[source,java]
+----
+class Currency {
+    private final Money balance; // bring the context to the value
+}
+
+class Money implements Serializable, Comparable<Money> {
+    
+    private BigDecimal amount;
+
+    Money add(Money other) {}
+
+
+}
+
+enum Currency {
+    USD, BRL
+}
+
+class Email {
+    @Email
+    private final String address;
+}
+
+
+@Builder
+@AllArgsConstructor
+class StreetAddress implements Serializable, Comparble<StreetAddress> {
+    final String city;
+    final String streetAddress;
+
+    final Country country;
+    final PostalCode postalCode;
+}
+
+----
+
+. The second important concept in tactical DDD and the sibling to value objects is the *entity*. An entity is an object whose identity is of importance. As opposed to value objects, entities are mutable. However, that does not mean you should create setter methods for every property
+
+[source,java]
+----
+class Person {
+    final PersonId personId; // VO is used fot the Entity ID
+    final PersonName personName;
+    final StreetAddress address;
+}
+
+class PersonId {
+    final String indentifer;
+}
+----
