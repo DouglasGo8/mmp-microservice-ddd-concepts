@@ -4,6 +4,10 @@
 
 - https://vaadin.com/learn/tutorials/ddd[Domain Driven Design Crash Course]
 - https://www.baeldung.com/java-modules-ddd-bounded-contexts[DDD Bounded Contexts in Java Modules]
+- https://github.com/acloudfan/MSFA-ACME-Sales-v1.0.git[Sales]
+- https://github.com/acloudfan/MSFA-ACME-Products-v1.0.git[Products]
+
+. #_Software Architect makes high-level design choices based on their experience, *knowledge & understanding* of the software models, standards, tools and techiniques_#
 
 == DDD Part 1: Strategic Domain-Driven Design
 
