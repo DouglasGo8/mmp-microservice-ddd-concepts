@@ -9,6 +9,14 @@
 
 . #_Software Architect makes high-level design choices based on their experience, *knowledge & understanding* of the software models, standards, tools and techiniques_#
 
+== Microservices Architecture
+
+.MSA Architecture
+image::architecture/thumb/MSA_Architecture_concepts.png[MSA Architecture]
+
+. Arranges an application as a collection of _loosely coupled services_.
+In a microservices architecture, services are fine-grained, and the protocols are lightweight
+
 == DDD Part 1: Strategic Domain-Driven Design
 
 #_Domain-Driven Design_# (DDD) has been around since Eric Evans published his book about the subject in 2003, this content is very much based on the books Domain-Driven Design: Tackling Complexity in the Heart of Software by Eric Evans and Implementing Domain-Driven Design by Vaughn Vernon
@@ -99,19 +107,23 @@ Identifying these relationships is of importance not only technically (how will 
 
 Under the contexts Maps and Integration Patterns we have some questions
 
-
 . Where are the context boundaries?
 . How are the contexts going to communicate technically?
-. How are we going to map between the contexts' domain models (i.e. how are we translating from one ubiquitous language to another)?
+. How are we going to map between the context's domain models (i.e. how are we translating from one ubiquitous language to another)?
 . How are we going to guard against unwanted or problematic changes occurring upstream?
 . How are we going to avoid causing trouble for downstream contexts?
 
-
 == DDD Part 2. Tactical Domain-Driven Design
 
-. Compared to strategic domain-driven design, tactical design is much more hands-on and closer to the actual code. Strategic design deals with abstract wholes whereas tactical design deals with classes and modules, The purpose of tactical design is to refine the domain model to a stage where it can be converted into working code, design is an iterative process and so it makes sense to combine strategic and tactical design.
-. One of the most important concepts in tactical DDD is the *value object.*, value objects should always be made _immutable_, instead of changing the state of the value object, you replace it with a new instance. For complex value objects, consider using the builder or essence pattern.
-. Value objects are not only containers of data - they can also contain business logic. The fact that the value objects are also immutable makes the business operations both thread-safe and side-effect free This is one of the reasons I like value objects so much and why you should try to model as many of your domain concepts as possible as value objects. Also, try to make the value objects as small and as coherent as possible - this makes them easier to maintain and reuse
+. Compared to strategic domain-driven design, tactical design is much more hands-on and closer to the actual code.
+Strategic design deals with abstract wholes whereas tactical design deals with classes and modules, The purpose of tactical design is to refine the domain model to a stage where it can be converted into working code, design is an iterative process and so it makes sense to combine strategic and tactical design.
+. One of the most important concepts in tactical DDD is the *value object.*, value objects should always be made _immutable_, instead of changing the state of the value object, you replace it with a new instance.
+For complex value objects, consider using the builder or essence pattern.
+. Value objects are not only containers of data - they can also contain business logic.
+The fact that the value objects are also immutable makes the business operations both thread-safe and side-effect free This is one of the reasons I like value objects so much and why you should try to model as many of your domain concepts as possible as value objects.
+Also, try to make the value objects as small and as coherent as possible - this makes them easier to maintain and reuse
+
+=== Value Objects
 
 [source,java]
 ----
@@ -120,7 +132,7 @@ class Currency {
 }
 
 class Money implements Serializable, Comparable<Money> {
-    
+
     private BigDecimal amount;
 
     Money add(Money other) {}
@@ -150,7 +162,12 @@ class StreetAddress implements Serializable, Comparble<StreetAddress> {
 
 ----
 
-. The second important concept in tactical DDD and the sibling to value objects is the *entity*. An entity is an object whose identity is of importance. As opposed to value objects, entities are mutable. However, that does not mean you should create setter methods for every property
+. The second important concept in tactical DDD and the sibling to value objects is the *entity*.
+An entity is an object whose identity is of importance.
+As opposed to value objects, entities are mutable.
+However, that does not mean you should create setter methods for every property
+
+=== Entities
 
 [source,java]
 ----
@@ -164,3 +181,118 @@ class PersonId {
     final String indentifer;
 }
 ----
+
+. A basic comparison based on DDD Interface
+
+Company A:
+
+    The manager looks up the employee’s record in the system.
+
+    The manager selects the 'Terminate Employment Contract' action.
+
+    The system asks for the termination date and reason.
+
+    The manager enters the needed information and clicks 'Terminate Contract'.
+
+    The system automatically updates the employee records, revokes the employee’s user credentials and electronic office key and sends a notification to the payroll system.
+
+Company B:
+
+    The manager looks up the employee’s record in the system.
+
+    The manager puts a check in the 'Contract terminated' checkbox and enters the termination date, then clicks 'Save'.
+
+    The manager logs into the user management system, looks up the user’s account, puts a check in the 'Disabled' checkbox and clicks 'Save'.
+
+    The manager logs into the office key management system, looks up the user’s key, puts a check in the 'Disabled' check box and clicks 'Save'.
+
+    The manager sends an e-mail to the payroll department notifying them that the employee has quit.
+
+=== Aggregates
+
+. Now when we know what entities and value objects are, we are going to look at the next important concept: aggregates.
+An aggregate is a group of entities and value objects that have certain characteristics:
+
+.Aggregate Definition
+image::architecture/thumb/aggregate.png[]
+
+
+
+. In addition, there are two important restrictions concerning aggregates:
+
+    An aggregate can be referenced from the outside through its root only. Objects outside of the aggregate may not reference any other entities inside the aggregate.
+
+    The aggregate root is responsible for enforcing business invariants inside the aggregate, ensuring that the aggregate is in a consistent state at all times.
+
+.Aggregate References
+image::architecture/thumb/aggregate_references.png[]
+
+This means that whenever you design an entity, you have to decide what kind of entity you are going to make: will the entity act as an aggregate root, or will it be what I call a local entity that lives inside an aggregate and under the supervision of an aggregate root?
+Since local entities cannot be referenced from outside the aggregate, it is enough that their IDs are unique within the aggregate (they have a local identity)
+
+- How is the entity going to be accessed in the application?
+- If the entity will be looked up by ID or through some kind of search it is probably an aggregate root.
+- Will other aggregates need to reference it?
+- If the entity will be referenced from within other aggregates it is definitely an aggregate root.
+- How is the entity going to be modified in the application?
+- If it can be modified independently it is probably an aggregate root.
+- If it cannot be modified without making changes to another entity it is probably a local entity.
+
+A business invariant is a rule that must always hold regardless of what happens to the aggregate.
+A simple business invariant could be that in an invoice, the total amount must always be the sum of the amounts of the line items
+
+==== Guideline for Aggregates
+
+. Aggregates are always retrieved and stored as a whole.
+The less data you have to read and write, the better your system will perform
+. Instead of referencing another aggregate directly, create a value object that wraps the ID of the aggregate root and use that as the reference
+. Try to design your operations so that you only make changes to one aggregate inside a single transaction.
+
+.Microservices change different aggregates in same transaction
+image::architecture/thumb/aggregate_transaction.png[]
+
+===== Aggregation Sample
+
+[source,java]
+----
+import java.util.List;
+class Order extends AggregateRoot<OrderId> {
+    private CustomerId customer;
+    private String shippingName;
+    private PostalAddress shippingAddress;
+    private String billingName;
+    private PostalAddress billingAddress;
+    private Money total;
+    private Long nextFreeItemId;
+    private List<OrderItem> items = new ArrayList<>();
+}
+----
+
+== Domain Events
+
+So far we have only looked at the "things" in the domain model.
+However, these can only be used to describe the static state that the model is in at any given moment.
+In many business models, you also need to be able to describe things that happen and change the state of the model.
+For this, you can use domain events.
+Domain events were not included in Evans' book about domain driven-design.
+They have been added to the toolbox later and are included in Vernon’s book.
+A domain event is anything that happens in the domain model that may be of interest to other parts of the system
+
+Domain events typically have the following characteristics:
+
+- They are immutable (after all, you can’t change the past).
+- They have a timestamp when the event in question occurred.
+- They may have a unique ID that helps to distinguish one event from another.
+This depends on the type of event and how the events are distributed.
+- They are published by aggregate roots or domain services (more about those later).
+The publisher is not aware of what happens with the event, nor should the listener be able to affect the publisher (in other words, publishing domain events should be side-effect free from the point of view of the publisher). *Because of this, it is recommended that domain event listeners do not run inside the same transaction that published the event.*
+#_Most parts of a typical business system will not require event sourcing, but some parts do.
+Forcing the entire system to use event sourcing as a persistence model would, in my opinion, be overkill_#
+
+=== Distributing Domain Events
+
+- Domain events are only usable if you have a reliable way of distributing them to listeners.
+Inside a monolith, you can handle the distribution in-memory by using the standard observer patter.
+However, even in this case you may need something more sophisticated if you follow the good practice of running the event publishers inside separate transactions.
+What if one of the event listeners fail and the event must be re-sent?
+
